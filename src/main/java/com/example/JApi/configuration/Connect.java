@@ -44,7 +44,6 @@ public class Connect {
             try {
                 Connection conn = DriverManager.getConnection(url, props);
                 connectionMap.put(connectXml.getName(), conn);
-                System.out.println(connectionMap.get(connectXml.getName()));
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
