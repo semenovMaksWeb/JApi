@@ -1,4 +1,4 @@
-package com.example.JApi.utils.ProceduresConfig;
+package com.example.JApi.model.ProceduresConfig;
 
 import lombok.Data;
 

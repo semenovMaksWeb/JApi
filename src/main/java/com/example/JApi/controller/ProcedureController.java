@@ -20,15 +20,12 @@ public class ProcedureController {
     @RequestMapping(
             method = RequestMethod.POST
     )
-    public List<Map<String, Object>> procedure(
-            @ApiParam(required = false, defaultValue = "main", value = "name файла")
-            @RequestParam String connection,
-
+    public Object procedure(
             @ApiParam(required = true, value = "name хранимой процедуры")
             @RequestParam String name,
 
             @RequestBody Map<String, Object> body
     ) throws Exception {
-        return procedureService.procedure(connection, name, body);
+        return procedureService.procedure(name, body);
     }
 }

@@ -1,8 +1,10 @@
 package com.example.JApi.service;
 
 import com.example.JApi.configuration.Connect;
-import com.example.JApi.utils.ProceduresConfig.ProceduresConfig;
-import org.postgresql.util.PGobject;
+
+import com.example.JApi.configuration.ProcedureConfig;
+import com.example.JApi.model.ProceduresConfig.ProceduresConfig;
+
 import org.springframework.stereotype.Service;
 
 import java.sql.*;
@@ -11,23 +13,29 @@ import java.util.*;
 @Service
 public class ProcedureService {
     private final Connect connect;
+    private final ProcedureConfig procedureConfig;
 
-    public ProcedureService(Connect connect){
+    public ProcedureService(Connect connect, ProcedureConfig procedureConfig){
         this.connect = connect;
+        this.procedureConfig = procedureConfig;
     }
 
-    public List<Map<String, Object>> procedure(String connection, String name, Map<String, Object> body) throws Exception {
+    public Object procedure(String name, Map<String, Object> body) throws Exception {
         Map<String, Connection> connectionMap = connect.getConnection();
-        Connection connectionInstance = connectionMap.get(connection);
+        ProceduresConfig proceduresConfig = procedureConfig.getProcedure().get(name);
+        Connection connectionInstance = connectionMap.get(proceduresConfig.getConnectString());
 
         if(connectionInstance == null){
-            throw new Exception("Соединение с именем " + connection + " не найдено");
+            throw new Exception("Соединение с именем " + proceduresConfig.getConnectString() + " не найдено");
         }
 
-        ProceduresConfig proceduresConfig = new ProceduresConfig(this.connect);
-        proceduresConfig.loaderProceduresConfig(name, connection);
+        List<Map<String, Object>> procedureSqlResult = procedureSql(connectionInstance, procedureConfig.getProcedure().get(name), body);
 
-        return procedureSql(connectionInstance, name, proceduresConfig, body);
+        if(!proceduresConfig.isArray()){
+            return  procedureSqlResult.get(0);
+        }
+
+        return procedureSqlResult;
     }
 
     private List<Map<String, Object>> parsingResultSet(ResultSet resultSet) throws SQLException {
@@ -46,31 +54,28 @@ public class ProcedureService {
 
             result.add(map);
         }
+
         return result;
     }
 
-
-//    private Object ParsingStruct(ResultSet resultSet, ResultSetMetaData metaData, int index) throws SQLException {
-//        Map<String, Object> res = new HashMap<>();
-//        return null;
-//    }
-
     private Object saveTypeParsing(ResultSet resultSet, ResultSetMetaData metaData, int index) throws SQLException {
-        System.out.println(metaData.getColumnType(index));
         return switch (metaData.getColumnType(index)) {
             case Types.VARCHAR, Types.CHAR, Types.LONGVARCHAR -> resultSet.getString(index);
             case Types.INTEGER, Types.BIGINT -> resultSet.getInt(index);
-//            case Types.STRUCT -> ParsingStruct(resultSet, metaData, index);
+            case Types.STRUCT -> throw new Error("Структура не поддерживается");
             case Types.DATE -> resultSet.getDate(index);
-            default -> null;
+            default -> throw new Error("Указанный тип данных не обрабатывается!");
         };
     }
 
     private void saveParameters(PreparedStatement preparedStatement, Map<String, Object> body, ProceduresConfig proceduresConfig){
         proceduresConfig.getProceduresParametersConfigList().forEach(proceduresParametersConfig -> {
+
              if(proceduresParametersConfig.getTypeParameters().equals("IN")){
                 switch (proceduresParametersConfig.getType()){
-                    case Types.VARCHAR, Types.CHAR, Types.LONGVARCHAR -> {
+
+                    case Types.VARCHAR, Types.CHAR, Types.LONGVARCHAR ->
+                    {
                         try {
                             preparedStatement.setString(proceduresParametersConfig.getIndex(), (String) body.get(proceduresParametersConfig.getName()));
                         } catch (SQLException e) {
@@ -78,6 +83,7 @@ public class ProcedureService {
                         }
 
                     }
+
                     case Types.INTEGER -> {
                         try {
                             preparedStatement.setInt(proceduresParametersConfig.getIndex(), (Integer) body.get(proceduresParametersConfig.getName()));
@@ -85,12 +91,18 @@ public class ProcedureService {
                             throw new RuntimeException(e);
                         }
                     }
+
+                    default -> throw new Error("у указанного типа входяшего параметра нет обработки");
                 }
              }
         });
     }
 
-    public List<Map<String, Object>> procedureSql(Connection connectionInstance, String name, ProceduresConfig proceduresConfig, Map<String, Object> body) throws SQLException {
+    public List<Map<String, Object>> procedureSql(
+            Connection connectionInstance,
+            ProceduresConfig proceduresConfig,
+            Map<String, Object> body
+    ) throws SQLException {
         PreparedStatement preparedStatement = connectionInstance.prepareStatement(proceduresConfig.getCall());
         preparedStatement.setEscapeProcessing(true);
         this.saveParameters(preparedStatement, body, proceduresConfig);
