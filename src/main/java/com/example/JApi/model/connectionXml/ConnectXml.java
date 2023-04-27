@@ -1,4 +1,4 @@
-package com.example.JApi.utils.connectionXml;
+package com.example.JApi.model.connectionXml;
 
 import lombok.Data;
 

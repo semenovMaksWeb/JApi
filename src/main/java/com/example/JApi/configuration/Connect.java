@@ -1,6 +1,6 @@
 package com.example.JApi.configuration;
 
-import com.example.JApi.utils.connectionXml.ConnectsXml;
+import com.example.JApi.model.connectionXml.ConnectsXml;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
