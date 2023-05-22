@@ -18,7 +18,7 @@ import java.util.List;
 public class ProceduresConfig {
     private int id;
     private String call;
-    private int idRight;
+    private String idRight;
     private String connectString;
     private boolean isArray;
     private List<ProceduresParametersConfig> proceduresParametersConfigList = new ArrayList<>();
@@ -28,7 +28,7 @@ public class ProceduresConfig {
             Connect connect,
             int id,
             String connectString,
-            int idRight,
+            String idRight,
             String call,
             boolean isArray
     ) throws SQLException, JAXBException, IOException {
